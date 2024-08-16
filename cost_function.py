@@ -44,6 +44,7 @@ def cost_function(X0):
 
     # Calculate the cost function
     Jfun = -0.5 * W1 * (1 - m_final_nd) + W2 * tof + W3 * np.linalg.norm(sdv - sfv)
+    logger.success("Cost function : {}", Jfun)
 
     return Jfun
 

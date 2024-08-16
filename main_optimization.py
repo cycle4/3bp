@@ -2,15 +2,16 @@ from loguru import logger
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.optimize import minimize
-
-
 import sys 
+
+# Add custom paths
 sys.path.append('./')
+
+# Import custom modules
 from cr3bp import cr3bp_alpha_mod
 from init_values import init_constants, init_values_opt, init_char_values
 from cost_function import cost_function
 from nonlcon import nonlcon
-
 
 def main_optimization():
     logger.debug("Starting main optimization.")
@@ -21,18 +22,20 @@ def main_optimization():
     # Initialize characteristic values
     lstar, mstar, mu_star, tstar, vstar, astar = init_char_values(G, m_earth, m_moon)
 
-    # Initialize other values
+    # Initialize optimization values
     s0, sd, thrust_max_nd, m_dot_max_nd, N_step, time_of_flight, tspan, m_min = init_values_opt()
 
-    # Options for solve_ivp
+    # Options for solve_ivp (integration settings)
     options = {'rtol': 1e-12, 'atol': 1e-12}
 
-    # Define the control vector
+    # Define the control vector (initial guess for the control)
     uref = 1 - 58568e-10  # u0
 
     # Perform the integration using solve_ivp (equivalent to ode45 in MATLAB)
-    sol = solve_ivp(lambda t, x: cr3bp_alpha_mod(t, x, mu, n, thrust_max_nd, m_dot_max_nd, uref),
-                    (tspan[0], tspan[-1]), s0, method='RK45', t_eval=tspan, **options)
+    sol = solve_ivp(
+        lambda t, x: cr3bp_alpha_mod(t, x, mu, n, thrust_max_nd, m_dot_max_nd, uref),
+        (tspan[0], tspan[-1]), s0, method='RK45', t_eval=tspan, **options
+    )
     
     if not sol.success:
         logger.error("Integration failed: {}", sol.message)
@@ -40,7 +43,7 @@ def main_optimization():
 
     logger.success("First integrator performed successfully.")
 
-    # Calculate distances
+    # Calculate distances to the target
     dist = np.linalg.norm(sol.y[:3, :].T - sd[:3], axis=1)
     mindist_t = np.argmin(dist)
 
@@ -48,6 +51,7 @@ def main_optimization():
     Thrusts = np.zeros((len(sol.t), 3))
     X0 = np.zeros((len(sol.t), 2))
 
+    # Calculate thrust direction and control vectors
     for i in range(mindist_t + 1):
         Thrusts[i, :] = uref * sol.y[3:6, i] / np.linalg.norm(sol.y[3:6, i])
         X0[i, :] = [uref, np.arctan2(Thrusts[i, 0], Thrusts[i, 1])]
@@ -57,29 +61,25 @@ def main_optimization():
     # Extract time associated with the closest distance
     tf = tspan[mindist_t]
 
-    # Create a new row with tf and a placeholder (e.g., np.nan or 0) to match the dimension of X0
-    new_row = np.array([[tf, np.nan]])  # or np.array([[tf, 0]]) if you prefer zero as a placeholder
+    # Create a new row with tf and a placeholder for the control vector
+    new_row = np.array([[tf, np.nan]])  # Placeholder can be np.nan or 0
 
     # Stack the new row with X0
     X0 = np.vstack([X0, new_row])
 
-    # Bounds for the optimizer (equivalent to lb and ub in MATLAB)
-    bounds = [(0.01, uref), (-np.pi, np.pi), (0, tf)]  # Replace tf[-1] with tf
+    # Define bounds for the optimizer (equivalent to lb and ub in MATLAB)
+    bounds = [(0.01, uref), (-np.pi, np.pi), (0, tf)]  # Bounds for each control variable
 
-
-        
-    
-    # Constraints (if any, similar to nonlcon in MATLAB)
+    # Define constraints (equivalent to nonlcon in MATLAB)
     constraints = [
         {'type': 'ineq', 'fun': lambda x: nonlcon(x)[0]},  # Inequality constraints
         {'type': 'eq', 'fun': lambda x: nonlcon(x)[1]}     # Equality constraints
     ]
 
-    # Flatten X0
+    # Flatten X0 to match the optimizer's input format
     x0_flattened = X0.flatten()
 
-    # Create bounds to match the length of x0_flattened
-    # Ensure that each element in X0 has corresponding bounds
+    # Create bounds for each element in x0_flattened
     bounds = []
     for i in range(len(x0_flattened)):
         if i % 3 == 0:  # uref bounds
@@ -89,31 +89,38 @@ def main_optimization():
         else:  # time bounds
             bounds.append((0, tf))
     
-    # Sanity check
+    # Sanity check to ensure bounds and flattened X0 match
     if len(bounds) != len(x0_flattened):
         raise ValueError("Mismatch between bounds and x0_flattened lengths")
 
     # Perform optimization using minimize
-    result = minimize(cost_function, x0_flattened, method='SLSQP', bounds=bounds, constraints=constraints, options={'maxiter': 1000, 'disp': True})
+    result = minimize(
+        cost_function, x0_flattened, method='SLSQP', 
+        bounds=bounds, constraints=constraints, 
+        options={'maxiter': 1000, 'disp': True}
+    )
 
     X = result.x
     fval = result.fun
 
     logger.success("Optimization completed successfully.")
 
-    return X0, Thrusts
+    return X0, Thrusts, X, fval
 
 def plot_results(X0, Thrusts):
     import matplotlib.pyplot as plt
 
+    # Create figure and axes
     fig, ax = plt.subplots(2, 1, figsize=(10, 10))
 
+    # Plot thrust direction in the x-y plane
     ax[0].plot(Thrusts[:, 0], Thrusts[:, 1], label='Thrust direction')
     ax[0].set_xlabel('Thrust in x-direction')
     ax[0].set_ylabel('Thrust in y-direction')
     ax[0].set_title('Thrust direction in x-y plane')
     ax[0].legend()
 
+    # Plot control vector (thrust magnitude and angle)
     ax[1].plot(X0[:, 0], X0[:, 1], label='Control vector')
     ax[1].set_xlabel('Thrust magnitude')
     ax[1].set_ylabel('Thrust angle')
@@ -124,10 +131,15 @@ def plot_results(X0, Thrusts):
 
 if __name__ == "__main__":
     try:
+        # Run the main optimization process
         X0, Thrusts = main_optimization()
         logger.info("Optimization completed successfully.")
+        
+        # Display results
         print("X0:", X0)
         print("Thrusts:", Thrusts)
+
+        # Plot the results
         plot_results(X0, Thrusts)
 
     except Exception as e:

@@ -9,7 +9,7 @@ def init_char_values(G, m_earth, m_moon):
     vstar = lstar / tstar  # Characteristic velocity (m/s)
     astar = vstar / tstar  # Characteristic acceleration (m/s^2)
 
-    logger.success("Characteristic values initialized successfully.")
+    logger.info("Characteristic values initialized successfully.")
     return lstar, mstar, mu_star, tstar, vstar, astar
 
 def init_constants():
@@ -23,7 +23,7 @@ def init_constants():
     n = np.sqrt(mu_earth / (r_earth + r_orbit)**3)
     g0 = 9.80665e-3  # km/s^2
 
-    logger.success("Constants initialized successfully.")
+    logger.info("Constants initialized successfully.")
     return G, m_earth, m_moon, mu, r_earth, r_orbit, mu_earth, n, g0
 
 def init_values_opt():
@@ -54,5 +54,5 @@ def init_values_opt():
     # Define tspan for integration
     tspan = np.linspace(0, time_of_flight, N_step)
 
-    logger.success("Optimization values initialized successfully.")
+    logger.info("Optimization values initialized successfully.")
     return s0, sd, thrust_max_nd, m_dot_max_nd, N_step, time_of_flight, tspan, m_min
