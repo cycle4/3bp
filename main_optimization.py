@@ -9,6 +9,7 @@ sys.path.append('./')
 from cr3bp import cr3bp_alpha_mod
 from init_values import init_constants, init_values_opt, init_char_values
 from cost_function import cost_function
+from nonlcon import nonlcon
 
 
 def main_optimization():
@@ -65,16 +66,14 @@ def main_optimization():
     # Bounds for the optimizer (equivalent to lb and ub in MATLAB)
     bounds = [(0.01, uref), (-np.pi, np.pi), (0, tf)]  # Replace tf[-1] with tf
 
-    def nonlcon(X):
-        # Example: a simple equality constraint where the sum of all elements should be 1
-        return np.sum(X) - 1
+
+        
     
     # Constraints (if any, similar to nonlcon in MATLAB)
-    constraints = {
-        'type': 'eq',  # or 'ineq' for inequality constraints
-        'fun': nonlcon
-    }
-
+    constraints = [
+        {'type': 'ineq', 'fun': lambda x: nonlcon(x)[0]},  # Inequality constraints
+        {'type': 'eq', 'fun': lambda x: nonlcon(x)[1]}     # Equality constraints
+    ]
 
     # Flatten X0
     x0_flattened = X0.flatten()

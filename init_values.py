@@ -39,7 +39,7 @@ def init_values_opt():
     # Calculate minimum mass (non-dimensional)
     m_min = s0[6] - m_dot_max_nd * 20 * 30 * 24 * 3600 / 2  # assuming half the time with max thrust
 
-    s0[6] = m_min  # Set initial mass to minimum mass for optimization
+    # s0[6] = m_min  # Set initial mass to minimum mass for optimization
 
     # Update sd with minimum mass
     sd = np.array([0.379, 0.866, 0, -0.069, 0.079, 0, m_min])
@@ -49,7 +49,7 @@ def init_values_opt():
     time_of_flight /= tstar  # make it non-dimensional
 
     # Number of steps
-    N_step = 10000
+    N_step = 1000
 
     # Define tspan for integration
     tspan = np.linspace(0, time_of_flight, N_step)
