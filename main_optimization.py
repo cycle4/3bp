@@ -1,7 +1,7 @@
 from loguru import logger
 import numpy as np
 from scipy.integrate import solve_ivp
-from scipy.optimize import minimize
+from scipy.optimize import minimize, differential_evolution
 import sys 
 
 # Add custom paths
@@ -93,13 +93,26 @@ def main_optimization():
     if len(bounds) != len(x0_flattened):
         raise ValueError("Mismatch between bounds and x0_flattened lengths")
 
-    # Perform optimization using minimize
-    result = minimize(
-        cost_function, x0_flattened, method='SLSQP', 
-        bounds=bounds, constraints=constraints, 
-        options={'maxiter': 1000, 'disp': True}
-    )
+    # # Perform optimization using minimize
+    # result = minimize(
+    #     cost_function, x0_flattened, method='SLSQP', 
+    #     bounds=bounds, constraints=constraints, 
+    #     options={'maxiter': 1000, 'disp': True}
+    # )
 
+    # Perform optimization using differential_evolution
+    result = differential_evolution(
+        cost_function,           # Your cost function
+        bounds,                  # Bounds on variables
+        strategy='best1bin',     # Strategy for mutation and crossover
+        maxiter=1000,            # Maximum number of generations
+        popsize=10,              # Population size
+        tol=1e-6,                # Tolerance for convergence
+        # mutation=(0.5, 1),       # Mutation constant or tuple for lower and upper bounds
+        recombination=0.7,       # Recombination constant
+        disp=True,               # Display progress during optimization
+        polish=True              # Use `minimize` for polishing the best solution
+    )
     X = result.x
     fval = result.fun
 

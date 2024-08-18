@@ -19,7 +19,8 @@ def cost_function(X0):
     # Extract the start and end times from tspan
     t0, tf = tspan[0], tspan[-1]
 
-    # ODE solver options equivalent to MATLAB's ode45 with custom tolerances
+    # # ODE solver options equivalent to MATLAB's ode45 with custom tolerances
+    # sol = solve_ivp(cr3bp_alpha, (t0, tf), s0, method='RK45', t_eval=tspan, rtol=1e-12, atol=1e-12)
     sol = solve_ivp(cr3bp_alpha, (t0, tf), s0, method='RK45', t_eval=tspan, rtol=1e-12, atol=1e-12)
 
     # Calculate the distance from the desired final state
